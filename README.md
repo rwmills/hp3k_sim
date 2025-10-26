@@ -5,8 +5,8 @@ Version   : A.00.00
 Author    : Robert W.Mills
 Copyright : © Robert W.Mills [rwmills.uk@gmail.com], 2025-2025.
 Note      : This program comes with absolutely no warranty.
+License   : [GNU General Public License v3.0](gnu.org/licenses/gpl-3.0.html)
 </pre></blockquote>
-> License : [GNU General Public License v3.0](gnu.org/licenses/gpl-3.0.html)
 
 ## Description:
 
@@ -53,6 +53,6 @@ this script and must be installed for it to work.
 
 > 3a. The dialog boxes are created with [yad (Yet Anathor Dialog)](github.com/v1cont/yad).
 
-> 3b. The file conversion is done by [elpdf2](github.com/pascalgp/elp2pdf).
+> 3b. The file conversion is done by [elp2pdf](github.com/pascalgp/elp2pdf).
 
 > 3c. The Windows format configuration file is accessed by the [Bash INI File Parser](github.com/tadgy/bash-ini-parser).
