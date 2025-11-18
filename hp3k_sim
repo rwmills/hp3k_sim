@@ -40,8 +40,7 @@ export __LICENSE="GPL3"
 # Declare where the Windows format INI file that holds the default configuration
 # data for this program is located.
 
-#export INIFILE="${HOME}/bin/data/hp3k_sim.ini"
-export INIFILE="${HOME}/hp3k/hp3k_sim.ini"
+export INIFILE="${HOME}/bin/data/hp3k_sim.ini"
 
 # = Functions ==================================================================
 
