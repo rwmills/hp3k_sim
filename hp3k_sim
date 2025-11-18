@@ -9,45 +9,106 @@ if [[ ${1,,} = "debug" ]] ; then
   fi
 
 # ------------------------------------------------------------------------------
-# Script Identification.
+# Program Identification.
 
-export SCRIPT_NAME="hp3k_sim"
-export SCRIPT_TITLE="HP3000 MPE V/E Simulator"
-export SCRIPT_VERSION="A.00.00" # v.uu.ff
+export __NAME="hp3k_sim"
+export __TITLE="HP3000 MPE V/E Simulator"
+export __VERSION="A.00.00" # v.uu.ff
   # v  = version (A-Z).
   # uu = update (00-99). Reset to 00 on change of 'version'.
   # ff = fix (00-99). Reset to 00 on change of 'update'.
-export SCRIPT_AUTHOR="Robert W.Mills"
-export SCRIPT_COPYRIGHT="Copyright © ${SCRIPT_AUTHOR} <rwmills.uk@gmail.com>, 2025-2025."
-export SCRIPT_IMAGE="${HOME}/bin/data/hp3k_sim.jpg"
-export SCRIPT_LICENSE="GPL3"
-
-export SCRIPT_INIFILE="${HOME}/bin/data/hp3k_sim.ini"
+export __AUTHOR="Robert W.Mills"
+export __COPYRIGHT="Copyright © ${__AUTHOR} <rwmills.uk@gmail.com>, 2025-2025."
+export __IMAGE="${HOME}/bin/data/hp3k_sim.jpg"
+export __LICENSE="GPL3"
 
 # ------------------------------------------------------------------------------
-# Declare hard-coded messages.
+# Program Return Status.
+#
+# Status   Description
+# ------  ----------------------------------------------------------------------
+#    0    Completed without errors.
+#    1    INIFILE does not exist or is not readable.
+#    2    Unable to find yad.
+#    3    Unable to find enscript.
+#    4    Unable to find ps2pdf (part of GhostScript).
+#    5    The Host Port required by the Convertor is currently in use.
+#    6    The Simulator has failed to start.
+#    7    The Convertor has failed to start.
 
-SCRIPT_CANCEL_MSG="Processing has been cancelled by the user."
+# ------------------------------------------------------------------------------
+# Declare where the Windows format INI file that holds the default configuration
+# data for this program is located.
 
-SCRIPT_ABORT_1_MSG="Unable to find yad. Processing aborted."
-SCRIPT_ABORT_2_MSG="Unable to find enscript. Processing aborted."
-SCRIPT_ABORT_3_MSG="Unable to find ps2pdf. Processing aborted."
-SCRIPT_ABORT_4_MSG="Unable to find parse-ini. Processing aborted."
-
-SCRIPT_HP3K_STARTED="The HP3K Simulator is now running."
-SCRIPT_HP3K_FAILED="The HP3K Simulator has failed to start."
-
-SCRIPT_HP3K_ERROR="Unknown error occured when starting the HP3K Simulator."
-
-SCRIPT_LP2PDF_STARTED="The LP2PDF Convertor is now running."
-SCRIPT_LP2PDF_FAILED="The LP2PDF Convertor has failed to start."
+#export INIFILE="${HOME}/bin/data/hp3k_sim.ini"
+export INIFILE="${HOME}/hp3k/hp3k_sim.ini"
 
 # = Functions ==================================================================
 
 # ------------------------------------------------------------------------------
+# Returns the value for a key and [section] from the file pointed to by INIFILE.
+#
+# Syntax: Value=$(IniValue Key Section)
+#
+# Parameters:
+#   Key             A string (quoted if it contains spaces) or a string
+#                   variable holding the name of the key to be searched for. 
+#   Section         A string (quoted if it contains spaces) or a string
+#                   variable holding the name of the section to be searched
+#                   for. A leading [ and trailing ] must be included.
+#
+# Return:
+#   Value           The value held for the searched for Section & Key.
+
+IniValue() {
+  local strKey="$1"
+  local strSection="$2"
+  local strRecord=""
+  local strCurrKey=""
+  local strValue=""
+
+  while read strRecord ; do # Loop until EOF INIFILE.
+
+    while : ; do # Loop until section found.
+      # Strip leading and trailing spaces.
+      strRecord="${strRecord#"${strRecord%%[![:space:]]*}"}"
+      strRecord="${strRecord%"${strRecord##*[![:space:]]}"}"
+      if [[ "${strRecord}" == "${strSection}" ]] ; then # Found section.
+        break
+        fi
+      read strRecord
+      done
+
+    while : ; do # Loop until key found.
+      read strRecord ; status=$?
+      if [[ ${status} == "1" ]] ; then # Found EOF INIFILE.
+        break
+        fi
+      # Strip leading and trailing spaces.
+      strRecord="${strRecord#"${strRecord%%[![:space:]]*}"}"
+      strRecord="${strRecord%"${strRecord##*[![:space:]]}"}"
+      strCurrKey=${strRecord%=*}
+      # Strip leading and trailing spaces.
+      strCurrKey="${strCurrKey#"${strCurrKey%%[![:space:]]*}"}"
+      strCurrKey="${strCurrKey%"${strCurrKey##*[![:space:]]}"}"
+      if [[ "${strCurrKey}" == "${strKey}" ]] ; then # Found key.
+        strValue=${strRecord#*=}
+        # Strip leading and trailing spaces.
+        strValue="${strValue#"${strValue%%[![:space:]]*}"}"
+        strValue="${strValue%"${strValue##*[![:space:]]}"}"
+        echo -n "$strValue"
+        return
+        fi
+      done
+
+    done < ${INIFILE}
+
+  }
+
+# ------------------------------------------------------------------------------
 # Display the LinePrinter to PDF Convertor Configuration Help Dialog.
 
-hp3k_convertor_help() {
+convertor_help() {
 
   cmd=( yad \
     --center \
@@ -55,40 +116,50 @@ hp3k_convertor_help() {
     --align=left \
     --text-width=40 \
     --borders=20 \
-    --window-icon="${SCRIPT_IMAGE}" \
-    --title="${SCRIPT_TITLE}" \
+    --window-icon="${__IMAGE}" \
+    --title="${__TITLE}" \
     --borders=20 \
     --text="\
-About the Line Printer to PDF Convertor Dialog:
+'Line Printer to PDF Convertor':
 
-This dialog displays the default Line Printer to PDF Convertor settings along
-with the settings for the Terminal Window that the convertor will run in.
+This dialog displays the Convertor settings along with the settings for the
+Terminal Window that the Convertor will run in.
 
-If the displayed convertor settings are not the ones that you want then you can
-either TAB to the field you want to change and enter a new value or use the -/+
-buttons to decrease/increase the current value.
+Use either the -/+ buttons to decrease/increase the displayed values OR
+highlight the value to be changed and enter a new value.
 
-Bar Colour: If you left-click on the ▼ symbol it will display a list of the
-available options. Left-click on the option you require.
+PDF Output Media is currently for information only. Its use will be expanded in
+a later version.
 
-PDF Directory: If you left-click on the ▼ symbol it will display a list of the
-folders that also appear in your File Manager's Side Bar. If the folder you want
-to write the PDF's to are not in this list then left-click on 'Other..' and the
-standard 'Select folder' dialog will be displayed. Select the folder you wish to
-use in the normal manner.
+Lines per Bar lets you change the height of the alternating bars in the PDF
+file. Use a value of 0 (zero) to disable the bars.
 
-You can adjust the default height, width and location (top-left corner) of the
-Terminal Window. You can either TAB to the field you want to change and enter a
-new value or use the -/+ buttons to decrease/increase the current value.
+Bar Colour lets you change the colour of the alternating bars in the PDF file.
+Click on the ▼ symbol and select the required colour from the list displayed.
 
-The Zoom Factor field lets you adjust the size of the displayed text within the
-terminal window. A zoom factor of 0.8 will reduce the text size by 20%, 1.2 will
-increase the text size by 20%, and 1.0 will set the text to its normal size.
- 
-Left-click the [Continue] button when you are ready to continue.
+PDF Directory lets you change the directory where the PDF files will be stored.
+Click on the ▼ symbol and select the required directory from the list displayed.
+If the directory you want is not in this list then click on 'Other..' and a
+standard 'Select' dialog will be displayed. Select the folder to use in the
+normal manner.
 
-If you decide to not continue then left-click the [Cancel] button. This will
-terminate the script." \
+PDF Font and Size is currently for information only. Its use will be expanded in
+a later version.
+
+System Name and Printer Name if entered will only appear in the Status Messages
+output by the Convertor. Their use will be expanded in a later version.
+
+You can adjust the Width (columns), the Height (rows), the 'location' of the
+Terminal Window and the Text Size. Use the -/+ buttons to decrease/increase the
+displayed values OR highlight the value to be changed and enter a new value.
+
+Text Size lets you adjust the size of the text within the Terminal Window.
+Use a value of 1.0 to set the text to its Full Size, 0.8 to reduce its size by
+20% and 1.2 to increase its size by 20%.
+
+Click the [Continue] button when you are ready to continue.
+
+Click the [Cancel] button if you wish to terminate the program." \
     --button="Close"
     )
 
@@ -96,15 +167,14 @@ terminate the script." \
 
   }
 
-export -f hp3k_convertor_help
+export -f convertor_help
 
 # ------------------------------------------------------------------------------
 # Display the LinePrinter to PDF Convertor Configuration Dialog.
 
-hp3k_convertor() {
+convertor() {
 
-  BAR_COLOURS=$(echo "^Green!Blue!Orange!Grey")
-    # ! = option separator, ^ = flags the default option.
+  # Display dialog box with default values.
 
   yad_cmd=$( yad \
     --form \
@@ -112,64 +182,67 @@ hp3k_convertor() {
     --align=left \
     --no-escape \
     --borders=20 \
-    --window-icon="${SCRIPT_IMAGE}" \
-    --title="${SCRIPT_TITLE}" \
+    --window-icon="${__IMAGE}" \
+    --title="${__TITLE}" \
     --text="Make your required changes and click [Continue] or [Cancel] to Exit:" \
     --focus-field=1 \
     --num-output \
     --field="\nLine Printer to PDF Convertor\n:LBL" "" \
     --field="    Host IP Address" "${HOST_IP}" \
     --field="    Host TCP Port:NUM" "${HOST_PORT}" \
-    --field="    PDF Output Media" "${PDF_MEDIA}" \
-    --field="    Lines per Bar:NUM" "${BAR_LINES}"\
-    --field="    Bar Colour:CB" "${BAR_COLOURS}" \
-    --field="    PDF Directory:DIR" "${PDF_DIRECTORY}" \
-    --field="    PDF Font and Size" "${PDF_FONT}" \
-    --field="    System Name (optional)" "${SYSTEM_ID}"\
-    --field="    Printer Name (optional)" "${PRINTER_ID}"\
+    --field="    PDF Output Media!See Help for more details.:RO" "${PDF_MEDIA}" \
+    --field="    Lines per Bar!See Help for more details.:NUM" "${BAR_LINES}"\
+    --field="    Bar Colour!Sets the colour of the alternating bars in the PDF file.:CB" "${BAR_COLOURS}" \
+    --field="    PDF Directory!See Help for more details.:DIR" "${PDF_DIRECTORY}" \
+    --field="    PDF Font and Size!See Help for more details.:RO" "${PDF_FONT}" \
+    --field="    System Name (optional)!See Help for more details." "${SYSTEM_ID}"\
+    --field="    Printer Name (optional)!See Help for more details." "${PRINTER_ID}"\
     --field="\nWindow Configuration\n:LBL" "" \
-    --field="    Width!Sets the width in columns.:NUM" "${LP2PDF_WIDTH}" \
-    --field="    Height!Sets the height in rows.:NUM" "${LP2PDF_HEIGHT}" \
-    --field="    X Cordinate!This and the next field sets the top-left location.:NUM" "${LP2PDF_XCOORD}" \
-    --field="    Y Cordinate!This and the previous field sets the top-left location.:NUM" "${LP2PDF_YCOORD}" \
-    --field="    Zoom Factor!1.0 is normal size, 0.8 is 80%.:NUM" "${LP2PDF_ZOOM}!!0.1!1" \
-    --button="Help!!Displays the Help dialog.":"bash -c hp3k_convertor_help" \
+    --field="    Width!Sets the width in columns.:NUM" "${CONV_WIDTH}" \
+    --field="    Height!Sets the height in rows.:NUM" "${CONV_HEIGHT}" \
+    --field="    X Cordinate!Number of pixels between the left-hand side of the Screen and the left-hand side of the Window.:NUM" "${CONV_XCOORD}" \
+    --field="    Y Cordinate!Number of pixels between the top of the Screen and the top of the Window.:NUM" "${CONV_YCOORD}" \
+    --field="    Text Size!Set the size of the Text (1.0 = Full Size, 0.5 = 50% (Half Size), 2.0 = 200% (Double Size)):NUM" "${CONV_TEXT}!!0.1!1" \
+    --field="\n:LBL" "" \
+    --button="Help!!Displays the Help dialog.":"bash -c convertor_help" \
     --button="Cancel":1 \
     --button="Continue":0
     )
 
   status=$?
 
-  if [[ ${status} -eq 1 ]]; then
-    echo "${SCRIPT_CANCEL_MSG}"
-    exit 1
+  if [[ ${status} -eq 1 ]]; then # Cancel button pressed.
+    echo "** Program has been cancelled by the user."
+    exit 0
     fi
 
-  NOT_USED_1=`echo ${yad_cmd} | awk --field-separator='|' '{print $1}'`
+  # Load returned values into global variables.
+
+  #NOT_USED=`echo ${yad_cmd} | awk --field-separator='|' '{print $1}'`
   HOST_IP=`echo ${yad_cmd} | awk --field-separator='|' '{print $2}'`
   HOST_PORT=`echo ${yad_cmd} | awk --field-separator='|' '{print $3}'`
   PDF_MEDIA=`echo ${yad_cmd} | awk --field-separator='|' '{print $4}'`
   BAR_LINES=`echo ${yad_cmd} | awk --field-separator='|' '{print $5}'`
-  COLOUR=`echo ${yad_cmd} | awk --field-separator='|' '{print $6}'`
+  BAR_COLOUR=`echo ${yad_cmd} | awk --field-separator='|' '{print $6}'`
   PDF_DIRECTORY=`echo ${yad_cmd} | awk --field-separator='|' '{print $7}'`
   PDF_FONT=`echo ${yad_cmd} | awk --field-separator='|' '{print $8}'`
   SYSTEM_ID=`echo ${yad_cmd} | awk --field-separator='|' '{print $9}'`
   PRINTER_ID=`echo ${yad_cmd} | awk --field-separator='|' '{print $10}'`
-  NOT_USED_2=`echo ${yad_cmd} | awk --field-separator='|' '{print $11}'`
-  LP2PDF_WIDTH=`echo ${yad_cmd} | awk --field-separator='|' '{print $12}'`
-  LP2PDF_HEIGHT=`echo ${yad_cmd} | awk --field-separator='|' '{print $13}'`
-  LP2PDF_XCOORD=`echo ${yad_cmd} | awk --field-separator='|' '{print $14}'`
-  LP2PDF_YCOORD=`echo ${yad_cmd} | awk --field-separator='|' '{print $15}'`
-  LP2PDF_ZOOM=`echo ${yad_cmd} | awk --field-separator='|' '{print $16}'`
+  #NOT_USED=`echo ${yad_cmd} | awk --field-separator='|' '{print $11}'`
+  CONV_WIDTH=`echo ${yad_cmd} | awk --field-separator='|' '{print $12}'`
+  CONV_HEIGHT=`echo ${yad_cmd} | awk --field-separator='|' '{print $13}'`
+  CONV_XCOORD=`echo ${yad_cmd} | awk --field-separator='|' '{print $14}'`
+  CONV_YCOORD=`echo ${yad_cmd} | awk --field-separator='|' '{print $15}'`
+  CONV_TEXT=`echo ${yad_cmd} | awk --field-separator='|' '{print $16}'`
 
   }
 
-export -f hp3k_convertor
+export -f convertor
 
 # ------------------------------------------------------------------------------
 # Display the Simulator Selection and Configuration Help Dialog.
 
-hp3k_simulator_help() {
+simulator_help() {
 
   cmd=( yad \
     --center \
@@ -177,30 +250,36 @@ hp3k_simulator_help() {
     --align=left \
     --text-width=40 \
     --borders=20 \
-    --window-icon="${SCRIPT_IMAGE}" \
-    --title="${SCRIPT_TITLE}" \
+    --window-icon="${__IMAGE}" \
+    --title="${__TITLE}" \
     --borders=20 \
     --text="\
-About the Simulator Selection and Configuration Dialog:
+'Simulator Selection' and 'Terminal Window Configuration':
 
-This dialog displays the default simulator along with the settings for the
-Terminal Window that the simulator will run in.
+This dialog displays the currently selected Simulator along with the settings
+for the Terminal Window that the Simulator will run in.
 
-If the displayed simulator is not the one that you want then left-click the ▼
-symbol and left-click on the simulator that you want to run.
+To change the Simulator that will be run, click on the ▼ symbol and select the
+required one from the list displayed.
 
-You can adjust the default height, width and location (top-left corner) of the
-Terminal Window. You can either TAB to the field you want to change and enter a
-new value or use the -/+ buttons to decrease/increase the current value.
+You can adjust the Width (columns), the Height (rows), the 'location' of the
+Terminal Window and the Text Size. Use the -/+ buttons to decrease/increase the
+displayed values OR highlight the value to be changed and enter a new value.
 
-The Zoom Factor field lets you adjust the size of the displayed text within the
-terminal window. A zoom factor of 0.8 will reduce the text size by 20%, 1.2 will
-increase the text size by 20%, and 1.0 will set the text to its normal size.
+The 'location' of the Terminal Window is set by the X and Y Coordinate's. They
+set the distance, in pixels, between the top-left corner of the Screen and the
+top-left corner of the Terminal Window.
+
+Text Size lets you adjust the size of the text within the Terminal Window.
+Use a value of 1.0 to set the text to its Full size, 0.8 to reduce its size by
+20% and 1.2 to increase its size by 20%.
  
-Left-click the [Continue] button when you are ready to continue.
+Click the [Continue] button when you are ready to continue.
 
-If you decide to not continue then left-click the [Cancel] button. This will
-terminate the script." \
+Click the [Cancel] button if you wish to terminate the program.
+
+Click the [About] button to display the programs Version, Copyright and
+License." \
     --button="Close"
     )
 
@@ -208,37 +287,36 @@ terminate the script." \
 
   }
 
-export -f hp3k_simulator_help
+export -f simulator_help
 
 # ------------------------------------------------------------------------------
 # Display the Scripts About Dialog.
 
-hp3k_about() {
+about() {
 
   cmd=( yad \
     --about \
-    --image="${SCRIPT_IMAGE}" \
-    --pname="${SCRIPT_TITLE}" \
-    --pversion="${SCRIPT_NAME} - ${SCRIPT_VERSION}" \
+    --image="${__IMAGE}" \
+    --pname="${__TITLE}" \
+    --pversion="${__NAME} - ${__VERSION}" \
     --comments="" \
-    --copyright="${SCRIPT_COPYRIGHT}" \
-    --license="${SCRIPT_LICENSE}"
+    --copyright="${__COPYRIGHT}" \
+    --license="${__LICENSE}"
     )
 
   "${cmd[@]}"
 
   }
 
-export -f hp3k_about
+export -f about
 
 # ------------------------------------------------------------------------------
 # Display the Simulator Selection and Configuration Dialog.
 
-hp3k_simulator() {
+simulator() {
 
-  SIMULATORS=$(echo "^Series 58+ (G.40.00) Single Console!Series 58+ (G.40.00) Dual Consoles!Series 58 (G.3P.00)")
-    # ! = option separator, ^ = flags the default option.
-
+  # Display dialog box with default values.
+  
   yad_cmd=$( yad \
     --form \
     --center \
@@ -247,172 +325,193 @@ hp3k_simulator() {
     --no-escape \
     --text-width=40 \
     --borders=20 \
-    --window-icon="${SCRIPT_IMAGE}" \
-    --title="${SCRIPT_TITLE}" \
+    --window-icon="${__IMAGE}" \
+    --title="${__TITLE}" \
     --text="Make your required changes and click [Continue] or [Cancel] to Exit:" \
     --focus-field=1 \
     --num-output \
     --field="\nSimulator Selection\n:LBL" "" \
-    --field="    Simulator!Select the required simulator .:CB" "${SIMULATORS}" \
-    --field="\nWindow Configuration\n:LBL" "" \
-    --field="    Width!Sets the width in columns.:NUM" "${HP3K_WIDTH}" \
-    --field="    Height!Sets the height in rows.:NUM" "${HP3K_HEIGHT}" \
-    --field="    X Cordinate!This and the next field sets the top-left location.:NUM" "${HP3K_XCOORD}" \
-    --field="    Y Cordinate!This and the previous field sets the top-left location.:NUM" "HP3K_YCOORD" \
-    --field="    Zoom Factor!1.0 is normal size, 0.8 is 80%.:NUM" "${HP3K_ZOOM}!!0.1!1" \
-    --button="About!!Display the Scripts About Dialog.":"bash -c hp3k_about" \
-    --button="Help!!Displays the Help Dialog.":"bash -c hp3k_simulator_help" \
-    --button="Cancel!!Terminate this script.":1 \
-    --button="Continue!!Start the Convertor Dialog.":0
+    --field="    Simulator:CB" "${SIMULATORS}" \
+    --field="\nTerminal Window Configuration\n:LBL" "" \
+    --field="    Width!Set the width in columns.:NUM" "${SIM_WIDTH}" \
+    --field="    Height!Set the height in rows.:NUM" "${SIM_HEIGHT}" \
+    --field="    X Cordinate!Number of pixels between the left-hand side of the Screen and the left-hand side of the Window.:NUM" "${SIM_XCOORD}" \
+    --field="    Y Cordinate!Number of pixels between the top of the Screen and the top of the Window.:NUM" "SIM_YCOORD" \
+    --field="    Text Size!Set the size of the Text (1.0 = Full Size, 0.5 = 50% (Half Size), 2.0 = 200% (Double Size)):NUM" "${SIM_TEXT}!!0.1!1" \
+    --field="\n:LBL" "" \
+    --button="About!!Display the About Dialog.":"bash -c about" \
+    --button="Help!!Display the Help Dialog.":"bash -c simulator_help" \
+    --button="Cancel":1 \
+    --button="Continue":0
     )
 
   status=$?
 
-  if [[ ${status} -eq 1 ]]; then
-    echo "${SCRIPT_CANCEL_MSG}"
-    exit 1
+  if [[ ${status} -eq 1 ]]; then # Cancel button pressed.
+    echo "** Program has been cancelled by the user."
+    exit 0
     fi
 
-  NOT_USED_1=`echo ${yad_cmd} | awk --field-separator='|' '{print $1}'`
-  SIMULATOR=`echo ${yad_cmd} | awk --field-separator='|' '{print $2}'`
-  NOT_USED_2=`echo ${yad_cmd} | awk --field-separator='|' '{print $3}'`
-  HP3K_WIDTH=`echo ${yad_cmd} | awk --field-separator='|' '{print $4}'`
-  HP3K_HEIGHT=`echo ${yad_cmd} | awk --field-separator='|' '{print $5}'`
-  HP3K_XCOORD=`echo ${yad_cmd} | awk --field-separator='|' '{print $6}'`
-  HP3K_YCOORD=`echo ${yad_cmd} | awk --field-separator='|' '{print $7}'`
-  HP3K_ZOOM=`echo ${yad_cmd} | awk --field-separator='|' '{print $8}'`
+  # Load returned values into global variables.
+  
+  #NOT_USED=`echo ${yad_cmd} | awk --field-separator='|' '{print $1}'`
+  SIM=`echo ${yad_cmd} | awk --field-separator='|' '{print $2}'`
+  #NOT_USED=`echo ${yad_cmd} | awk --field-separator='|' '{print $3}'`
+  SIM_WIDTH=`echo ${yad_cmd} | awk --field-separator='|' '{print $4}'`
+  SIM_HEIGHT=`echo ${yad_cmd} | awk --field-separator='|' '{print $5}'`
+  SIM_XCOORD=`echo ${yad_cmd} | awk --field-separator='|' '{print $6}'`
+  SIM_YCOORD=`echo ${yad_cmd} | awk --field-separator='|' '{print $7}'`
+  SIM_TEXT=`echo ${yad_cmd} | awk --field-separator='|' '{print $8}'`
 
   }
 
-export -f hp3k_simulator
+export -f simulator
 
 # = Mainline ===================================================================
 
 # ------------------------------------------------------------------------------
-# Check that required programs exist. Terminate with a status 2 if they don't.
+# Check that INIFILE exists and is readable.
 
-( command -v yad >/dev/null ) || { echo ${SCRIPT_ABORT_1_MSG}; exit 2;}
-( command -v enscript >/dev/null ) || { echo ${SCRIPT_ABORT_2_MSG}; exit 2;}
-( command -v ps2pdf >/dev/null ) || { echo ${SCRIPT_ABORT_3_MSG}; exit 2;}
-( command -v parse-ini >/dev/null ) || { echo ${SCRIPT_ABORT_4_MSG}; exit 2;}
+if [[ ! -r ${INIFILE} ]] ; then
+  echo "** The INIFILE either does not exist OR it is not readable."
+  echo "** Program Terminating **"
+  exit 1
+  fi
 
 # ------------------------------------------------------------------------------
-# Set the default values from the Windows format INI File.
+# Check that the required support programs exist. Terminate if they don't.
 
-# Parse the INI File.
+if ( ! command -v yad >/dev/null ) ; then
+  echo "** Unable to find yad."
+  echo "** Program Terminating **"
+  exit 2
+  fi
 
-eval "$(parse-ini ${SCRIPT_INIFILE})"
+if ( ! command -v enscript >/dev/null ) ; then
+  echo "** Unable to find enscript."
+  echo "** Program Terminating **"
+  exit 3
+  fi
 
-# Set the Simulator Window Defaults.
-
-HP3K_WIDTH=${INI_hp3k_window['columns']}
-HP3K_HEIGHT=${INI_hp3k_window['rows']}
-HP3K_XCOORD=${INI_hp3k_window['x_coordinate']}
-HP3K_YCOORD=${INI_hp3k_window['y_coordinate']}
-HP3K_ZOOM=${INI_hp3k_window['zoom']}
-
-# Set the Convertor elp2pdf Defaults.
-
-HOST_IP=${INI_convertor['ip_address']}
-HOST_PORT=${INI_convertor['tcp_port']}
-PDF_MEDIA=${INI_convertor['output_media']}
-BAR_LINES=${INI_convertor['lines_per_bar']}
-COLOUR=${INI_convertor['bar_colour']}
-PDF_DIRECTORY=${INI_convertor['directory']}
-PDF_FONT=${INI_convertor['font_and_size']}
-SYSTEM_ID=${INI_convertor['system_name']}
-PRINTER_ID=${INI_convertor['printer_name']}
-
-# Prefix this path with the users HOME directory.
-
-PDF_DIRECTORY="${HOME}${PDF_DIRECTORY}"
-
-# Set the Convertor Window Defaults.
-
-LP2PDF_WIDTH=${INI_elp2pdf_window['columns']}
-LP2PDF_HEIGHT=${INI_elp2pdf_window['rows']}
-LP2PDF_XCOORD=${INI_elp2pdf_window['x_coordinate']}
-LP2PDF_YCOORD=${INI_elp2pdf_window['y_coordinate']}
-LP2PDF_ZOOM=${INI_elp2pdf_window['zoom']}
+if ( ! command -v ps2pdf >/dev/null ) ; then
+  echo "** Unable to find ps2pdf (part of GhostScript)."
+  echo "** Program Terminating **"
+  exit 4
+  fi
 
 # ------------------------------------------------------------------------------
 # Display the Simulator Selection and Configuration Dialog.
 
-hp3k_simulator
+# Get the number of available Simulators.
+
+SIM_0=$(IniValue sim_0 [simulator])
+
+# Set the Simulator Defaults.
+
+SIMULATORS=$(IniValue "sim_1" [simulator])
+
+for (( i=2; i<=$SIM_0; i++ )) ; do
+
+  SIMULATORS+="!"
+  SIMULATORS+=$(IniValue "sim_${i}" [simulator])
+
+  done
+
+# Set the Simulator Window Defaults.
+
+SIM_WIDTH=$(IniValue columns [simulator_window])
+SIM_HEIGHT=$(IniValue rows [simulator_window])
+SIM_XCOORD=$(IniValue x_coordinate [simulator_window])
+SIM_YCOORD=$(IniValue y_coordinate [simulator_window])
+SIM_TEXT=$(IniValue text_size [simulator_window])
+
+# Display the Simulator Dialog.
+
+simulator
+
+# Is the Convertor enabled for this Simulator?
+
+CONV_ENABLED=$(IniValue "conv_${SIM}" [simulator])
 
 # ------------------------------------------------------------------------------
 # Display the LinePrinter to PDF Convertor Configuration Dialog.
 
-hp3k_convertor
+if [[ ${CONV_ENABLED} == "YES" ]] ; then # Enabled.
+
+  # Set the Convertor Defaults.
+
+  HOST_IP=$(IniValue ip_address [convertor])
+  HOST_PORT=$(IniValue tcp_port [convertor])
+  PDF_MEDIA=$(IniValue output_media [convertor])
+  BAR_LINES=$(IniValue lines_per_bar [convertor])
+  BAR_COLOURS=$(IniValue bar_colours [convertor])
+  PDF_DIRECTORY=$(IniValue directory [convertor])
+  PDF_FONT=$(IniValue font_and_size [convertor])
+  SYSTEM_ID=$(IniValue system_name [convertor])
+  PRINTER_ID=$(IniValue printer_name [convertor])
+
+  # Prefix this path with the users HOME directory.
+
+  PDF_DIRECTORY="${HOME}${PDF_DIRECTORY}"
+
+  # Set the Convertor Window Defaults.
+
+  CONV_WIDTH=$(IniValue columns [convertor_window])
+  CONV_HEIGHT=$(IniValue rows [convertor_window])
+  CONV_XCOORD=$(IniValue x_coordinate [convertor_window])
+  CONV_YCOORD=$(IniValue y_coordinate [convertor_window])
+  CONV_TEXT=$(IniValue text_size [convertor_window])
+
+  # Display the Convertor Dialog.
+
+  convertor
+
+  fi
+
+# ------------------------------------------------------------------------------
+# Terminate cleanly if the Host Port is already in use.
+
+if [[ ${CONV_ENABLED} == "YES" ]] ; then # Convertor Enabled.
+
+  TCP_PORT_IN_USE=$(lsof -nP -iTCP:${HOST_PORT})
+  
+  if [[ ${TCP_PORT_IN_USE} != "" ]] ; then # Host Port in use.
+    echo "** The Host Port required by the Convertor is currently in use."
+    echo "   Please wait a few minutes and try again."
+    echo "** Program Terminating **"
+    exit 5
+    fi
+
+  fi
 
 # ------------------------------------------------------------------------------
 # Switch to the correct directory and start the Simulator.
 
-if [[ ${SIMULATOR} = "1" ]] ; then
-  cd ~/HP3000/Series_58+
+cd ${HOME}$(IniValue "dir_${SIM}" [simulator])
 
-  gnome-terminal \
-    --title="HP3000/58+ -- Combined Consoles" \
-    --hide-menubar \
-    --geometry=${HP3K_WIDTH}x${HP3K_HEIGHT}+${HP3K_XCOORD}+${HP3K_YCOORD} \
-    --zoom=${HP3K_ZOOM} \
-    -- hp3000 CoolStart NoMPE
+gnome-terminal \
+  --title="$(IniValue "title_${SIM}" [simulator])" \
+  --hide-menubar \
+  --geometry=${SIM_WIDTH}x${SIM_HEIGHT}+${SIM_XCOORD}+${SIM_YCOORD} \
+  --zoom=${SIM_TEXT} \
+  -- hp3000 "$(IniValue "start_${SIM}" [simulator])"
 
-  status=$?
+status=$?
 
-  if [[ ${status} -eq 0 ]]; then
-    echo "${SCRIPT_HP3K_STARTED}"
-  else
-    echo "${SCRIPT_HP3K_FAILED}"
-    exit 1
-    fi
-
-elif [[ ${SIMULATOR} = "2" ]] ; then
-  cd ~/HP3000/Series_58+
-
-  gnome-terminal \
-    --title="HP3000/58+ -- Simulator Console Only" \
-    --hide-menubar \
-    --geometry=${HP3K_WIDTH}x${HP3K_HEIGHT}+${HP3K_XCOORD}+${HP3K_YCOORD} \
-    --zoom=${HP3K_ZOOM} \
-    -- hp3000 CoolStart MPE
-
-  status=$?
-
-  if [[ ${status} -eq 0 ]]; then
-    echo "${SCRIPT_HP3K_STARTED}"
-  else
-    echo "${SCRIPT_HP3K_FAILED}"
-    exit 1
-    fi
-
-elif [[ ${SIMULATOR} = "3" ]] ; then
-  cd ~/HP3000/Series_58
-
-  gnome-terminal \
-    --title="HP3000/58 -- Combined Consoles" \
-    --hide-menubar \
-    --geometry=${HP3K_WIDTH}x${HP3K_HEIGHT}+${HP3K_XCOORD}+${HP3K_YCOORD} \
-    --zoom=${HP3K_ZOOM} \
-    -- hp3000 mpe-ve-auto
-
-  status=$?
-
-  if [[ ${status} -eq 0 ]]; then
-    echo "${SCRIPT_HP3K_STARTED}"
-  else
-    echo "${SCRIPT_HP3K_FAILED}"
-    exit 1
-    fi
-
+if [[ ${status} -eq 0 ]]; then
+  echo "** The Simulator is now running."
 else
-  # This should never be returned. Major problem exists if it does.
-  echo "${SCRIPT_HP3K_ERROR}"
-  exit 999
+  echo "** The Simulator has failed to start."
+  echo "** Program Terminating **"
+  exit 6
   fi
 
 # ------------------------------------------------------------------------------
 # Start the Convertor.
+
+if [[ ${CONV_ENABLED} != "YES" ]] ; then # Exit if not enabled.
+  exit 0
+  fi
 
 if [[ ${SYSTEM_ID} != "" ]] ; then
   SYSTEM_NAME="--system-id ${SYSTEM_ID}"
@@ -427,25 +526,24 @@ else
   fi
 
 gnome-terminal \
-  --title="HP3000/58+ -- Line Printer to PDF" \
+  --title="HP3000 -- Line Printer ${PRINTER_NAME} to PDF" \
   --hide-menubar \
-  --geometry=${LP2PDF_WIDTH}x${LP2PDF_HEIGHT}+${LP2PDF_XCOORD}+${LP2PDF_YCOORD} \
-  --zoom=${LP2PDF_ZOOM} \
-  -- elp2pdf.pl --lptype mpev --color ${COLOUR} --font ${PDF_FONT} --bar-height ${BAR_LINES} --ip ${HOST_IP} --port ${HOST_PORT} --path ${PDF_DIRECTORY} ${SYSTEM_NAME} ${PRINTER_NAME}
+  --geometry=${CONV_WIDTH}x${CONV_HEIGHT}+${CONV_XCOORD}+${CONV_YCOORD} \
+  --zoom=${CONV_TEXT} \
+  -- elp2pdf.pl --lptype mpev --color ${BAR_COLOUR} --font ${PDF_FONT} --bar-height ${BAR_LINES} --ip ${HOST_IP} --port ${HOST_PORT} --path ${PDF_DIRECTORY} ${SYSTEM_NAME} ${PRINTER_NAME}
 
 status=$?
 
 if [[ ${status} -eq 0 ]]; then
-  echo "${SCRIPT_LP2PDF_STARTED}"
+  echo "** The Convertor is now running."
 else
-  echo "${SCRIPT_LP2PDF_FAILED}"
-  exit 1
+  echo "** The Convertor has failed to start."
+  echo "** Program Terminating **"
+  exit 7
   fi
 
 # ------------------------------------------------------------------------------
-# Disable debug tracing just in case it has been enabled.
+# End of Program.
 
-set -x
+echo "End of Program"
 
-# ------------------------------------------------------------------------------
-# End of Script.
