@@ -1,4 +1,4 @@
-# Install hp3k_sim for the HP3000 MPE V/E Simulator
+# Install hp3k_sim for the HP3000 MPE V/E Simulator Utility
 
 - Version A.00.00
 

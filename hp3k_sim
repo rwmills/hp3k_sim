@@ -12,7 +12,7 @@ if [[ ${1,,} = "debug" ]] ; then
 # Program Identification.
 
 export __NAME="hp3k_sim"
-export __TITLE="HP3000 MPE V/E Simulator"
+export __TITLE="HP3000 MPE V/E Simulator Utility"
 export __VERSION="A.00.00" # v.uu.ff
   # v  = version (A-Z).
   # uu = update (00-99). Reset to 00 on change of 'version'.
@@ -545,4 +545,3 @@ else
 # End of Program.
 
 echo "End of Program"
-
