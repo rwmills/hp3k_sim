@@ -1,0 +1,16 @@
+LibraryPath: /home/USER/.enscript:/usr/share/enscript
+
+# Media definitions:
+#
+#   All dimensions are in PostScript points (1/72nd of an inch).
+#
+#   From what I have read the paper width and height are ignored.
+#
+#   llx/lly is the lower-left and urx/ury is the upper-right coordinates
+#   of the print area starting from the lower left of the page.
+#
+#                  -----page----  ----print area----
+#        name      width  height  llx  lly  urx  ury
+
+Media: USFanfold    999     792    24   24  975  768
+Media: Notecard3x5  216     360   216  450  396  782
