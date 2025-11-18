@@ -22,9 +22,9 @@
 > Four buttons reside at the bottom of the dialog box.
 
 >   * [About] will display a dialog box giving details about **hp3k_sim**.
-  * [Help] will display a dialog box that gives additional information about the dialog box.
-  * [Cancel] will terminate **hp3k_sim**.
-  * [Continue] will either display the <u>Line Printer to PDF Convertor</u> dialog box (if enabled) OR open a terminal window where the selected simulator will be executed.
+>   * [Help] will display a dialog box that gives additional information about the dialog box.
+>   * [Cancel] will terminate **hp3k_sim**.
+>   * [Continue] will either display the <u>Line Printer to PDF Convertor</u> dialog box (if enabled) OR open a terminal window where the selected simulator will be executed.
 
 ### Line Printer to PDF Convertor
 
@@ -35,5 +35,5 @@
 > Three buttons reside at the bottom of the dialog box.
 
 >   * [Help] will display a dialog box that gives additional information about the dialog box.
-  * [Cancel] will terminate **hp3k_sim**.
-  * [Continue] will open two terminal windows. The first is where the simulator is executed and the second is where the convertor is executed.
+>   * [Cancel] will terminate **hp3k_sim**.
+>   * [Continue] will open two terminal windows. The first is where the simulator is executed and the second is where the convertor is executed.
