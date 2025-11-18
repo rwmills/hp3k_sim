@@ -1,58 +1,39 @@
-# hp3k_sim - "HP3000 MPE V/E Simulator
+# hp3k_sim - HP3000 MPE V/E Simulator
 
-<blockquote><pre>
-Version   : A.00.00
-Author    : Robert W.Mills
-Copyright : © Robert W.Mills [rwmills.uk@gmail.com], 2025-2025.
-Note      : This program comes with absolutely no warranty.
-License   : [GNU General Public License v3.0](gnu.org/licenses/gpl-3.0.html)
-</pre></blockquote>
+- Version   : A.00.00
+- Author    : Robert W.Mills
+- Copyright : © Robert W.Mills [rwmills.uk@gmail.com], 2025-2025.
+- Note      : This program comes with absolutely no warranty.
+- License   : [GNU General Public License v3.0 or later](gnu.org/licenses/gpl-3.0.html)
+
 
 ## Description:
 
-> Displays a dialog box where you can select which 'HP3000 Simulator' that you
-> want to run from the drop-down list. Additional fields within the dialog box
-> lets you adjust the height, width and location of the Terminal Window that
-> the simulator is executed within.
+> **hp3k_sim** was designed to automate the configuration and execution of a SimH HP3000 MPE V/E Simulator.
 
-> You then have the option to either **Continue** or **Cancel**.
+> If the simulator is configured to enable conversion of Line Printer output to PDF then a process will be execute to perform this function. The look of the PDF emulates the iconic **Green Bar** continuous form paper that dominated the early computer age in several variants.
 
-> If you choose **Continue**, a second dialog box is displayed where you can amend
-> the default settings of the 'Line Printer to PDF Convertor'. You can also
-> adjust the height, width and location of the Terminal Window that the
-> Converter is executed within.
+### Simulator Selection and Terminal Window Configuration
 
->You then have the option to either **Continue** or **Cancel**.
+> This is a dialog box that displays the currently selected simulator along with the settings for the terminal window that the simulator will run in.
 
->If you choose **Continue**, two Terminal Windows will be opened. The first will
-> contain the Simulator Console (see Note 1 below) and the second will contain the
-> Status Messages output by the Convertor.
+> It lets you select which of available simulators will be executed. You can also adjust the width (columns), height (rows), 'location' of the terminal window and the text size used within the terminal window.
 
-> At this point the process will terminate as it's job has been completed.
+> Four buttons reside at the bottom of the dialog box.
 
-## Warnings:
+>   * [About] will display a dialog box giving details about **hp3k_sim**.
+  * [Help] will display a dialog box that gives additional information about the dialog box.
+  * [Cancel] will terminate **hp3k_sim**.
+  * [Continue] will either display the <u>Line Printer to PDF Convertor</u> dialog box (if enabled) OR open a terminal window where the selected simulator will be executed.
 
- 1. If a print has been release for conversion to a PDF then DO NOT perform a Ctrl+A shutdown (MPE Console) until the convertor reports that it has finished (done) processing the file. If you do then the condition of the PDF is in doubt.
+### Line Printer to PDF Convertor
 
- 2. The 'Line Printer to PDF Convertor' will automatically terminate when you exit the 'Simulator'. Any print that is currently being processed will be in a doubtfull condition. All subsequent prints that were released for converting will have been lost.
+> This is a dialog box that displays the convertor settings along with the settings for the terminal window that the convertor will run in.
 
-## Notes:
+> It lets you adjust where the Line Printer output is comming from, how many lines and the colour used for the alternating bars, where the PDF files will be written, and the font (type and size) that will be used. You can also adjust the width (columns), height (rows), 'location' of the terminal window and the text size used within the terminal window.
 
-1. If you chose a simulator with the 'Dual Console' option then you will be
-requested to connect a Terminal Emulator (Reflection, QCTerm, WS92, etc.), via
-Telnet, to TCP Port 1045. The simulator will then redirect the 'MPE System
-Console' to the Terminal Emulator.
+> Three buttons reside at the bottom of the dialog box.
 
-2. This process uses a Windows Style INI File to hold the default values. The
-INI file uses the same name as the script but has an '.ini' extension and must
-reside in the same directory that holds the script. Please read the comments
-within the INI File before making any changes.
-
-3. The yad, elp2pdf, enscript and Ghostscript (ps2pdf) packages are required by
-this script and must be installed for it to work.
-
-> 3a. The dialog boxes are created with [yad (Yet Anathor Dialog)](github.com/v1cont/yad).
-
-> 3b. The file conversion is done by [elp2pdf](github.com/pascalgp/elp2pdf).
-
-> 3c. The Windows format configuration file is accessed by the [Bash INI File Parser](github.com/tadgy/bash-ini-parser).
+>   * [Help] will display a dialog box that gives additional information about the dialog box.
+  * [Cancel] will terminate **hp3k_sim**.
+  * [Continue] will open two terminal windows. The first is where the simulator is executed and the second is where the convertor is executed.
