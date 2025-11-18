@@ -12,5 +12,4 @@
 |hp3k_sim       |Bash Script|HP3000 MPE V/E Simulator.                |A.00.00 |
 |hp3k_sim.ini   |Windows INI|Configuration file for hp3k_sim.         |        |
 |hp3k_sim.jpg   |Image      |Image displayed in hp3k_sim About dialog.|        |
-|hp3k_sim.md    |Markdown   |Documentation for hp3k_sim.              |A.00.00 |
 |README.md      |Markdown   |Gives an overview of hp3k_sim.           |        |
