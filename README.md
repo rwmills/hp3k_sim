@@ -17,7 +17,7 @@
 
 > This is a dialog box that displays the currently selected simulator along with the settings for the terminal window that the simulator will run in.
 
-> It lets you select which of available simulators will be executed. You can also adjust the width (columns), height (rows), 'location' of the terminal window and the text size used within the terminal window.
+> It lets you select which of the available simulators will be executed. You can also adjust the width (columns), height (rows), 'location' of the terminal window and the text size used within the terminal window.
 
 > Four buttons reside at the bottom of the dialog box.
 
