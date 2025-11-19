@@ -36,7 +36,9 @@
 
 - Copy **hp3k_sim.ini** and **hp3k_sim.jpg** to the **$HOME/bin/data/** directory.
 
-- Copy **hp3k_sim.md** and **hp3k_install.md** (this file) to the **$HOME/bin/doc/** directory. <u>This is optional.</u>
+- Copy **hp3k_install.md** (this file) to the **$HOME/bin/doc/** directory. <u>This is optional.</u>
+
+- Copy **README.md** as **hp3k_sim.md** to the **$HOME/bin/doc/** directory. <u>This is optional.</u>
 
 - Copy **dot-enscryptrc** to the **$HOME/** directory and rename it to **.enscryptrc**.
 
