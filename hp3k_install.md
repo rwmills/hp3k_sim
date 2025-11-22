@@ -1,6 +1,6 @@
 # Install hp3k_sim for the HP3000 MPE V/E Simulator Utility
 
-- Version A.00.00
+- Version A.00.01
 
 - **These instructions only apply to Linux**.
 
@@ -13,6 +13,8 @@
 > - [David Bryant's Series 58](https://simh.trailing-edge.com/hp/#Downloads) is installed in the **Series_58_DB/** sub-directory.
 
 > - [Gavin Scott's Turnkey Big Series 58](https://drive.google.com/uc?export=download&id=1AFlELXfs6DIm2RHpBlI-6qSe0VxYBWzz) is installed in the **Series_58_GS/** sub-directory.
+
+- There is a directory named **$HOME/HP3000/PDF_Prints/** where the files created from by the <u>Line Printer to PDF Convertor</u> are stored. Change line 132 in **hp3k_sim.ini** if you want the files placed somewhere else.
 
 - There is a directory named **$HOME/bin/** where the executables are stored. It must be included in the **PATH** variable.
 
@@ -32,7 +34,7 @@
 
 ## Install Files
 
-- Copy **hp3k_sim**, **elp2pdf.pl** and **elp-mpev.pl** to the **$HOME/bin/** directory.
+- Copy **hp3k_sim** and **elp2pdf.pl** to the **$HOME/bin/** directory.
 
 - Copy **hp3k_sim.ini** and **hp3k_sim.jpg** to the **$HOME/bin/data/** directory.
 
@@ -62,6 +64,14 @@
 
 > ### hp3k_sim.ini
 
-> This is a Windows format INI file and matches my personal setup that supports four simulator configurations. The comments within the file should be clear enough to guide you making required changes except for the **x_coordinate** keys in the [simulator_window] and [convertor_window] sections.
+> This is a Windows format INI file and supports two simulator configurations. The comments within the file should be clear enough to guide you making required changes.
 
->  My setup consists of two screens. The primary has a resolution of 1920 x 1080 and the secondary has a resolution of 1024 x 768. The secondary screen is positioned to the right of the primary with the top of both screens, configured within Linux, to be level. The **x_coordinate** for both the simulator and convertor terminal windows is set to 1920. This forces both of the terminal windows onto the secondary screen. This will need to changing if you do not have multiple screens.
+> NOTE: The two terminal windows created will be 80col x 24row in size and located at the top-left of the screen.
+
+> It is suggested that you make the following changes:
+
+> - Try reducing the **text size** to **0.8**. This will reduce the size of the windows.
+
+> - Change the **x** and **y coordinate** for both windows to move them to a better location and so that they are not overlapping each other. If you have a secondary screen then it might be better to place them there out of the way.
+
+> - Reduce the convertor window **rows** to **10** as its main use is to display the convertor's status messages.
