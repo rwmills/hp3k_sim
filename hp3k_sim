@@ -1,0 +1,742 @@
+#!/bin/bash
+
+# ------------------------------------------------------------------------------
+# Check if an Execution Trace was requested. If yes then 'set -x'.
+
+if [[ ${1,,} = "trace" ]]; then
+  echo "Execution Trace has been enabled."
+  set -x
+  fi
+
+# ------------------------------------------------------------------------------
+# Identification.
+
+export _NAME="hp3k_sim"
+export _TITLE="HP3000 MPE/V Simulator Utility"
+export _VERSION="B.00.00" # v.uu.ff
+  # v  = version (A-Z).
+  # uu = update (00-99). Reset to 00 on change of 'version'.
+  # ff = fix (00-99). Reset to 00 on change of 'update'.
+export _AUTHOR="Robert W.Mills"
+export _COPYRIGHT="Copyright © 2025-2026, ${_AUTHOR}"
+export _IMAGE="${HOME}/bin/data/hp3k_sim.jpg"
+export _LICENSE="GPL3"
+
+# ------------------------------------------------------------------------------
+# Mofification History.
+#
+# A.00.00 Initial version.
+# A.01.00 Removed the PDF Fomt and Size. Use the default setting in elp2pdf.pl.
+# B.00.00 Rewritten to implement usage of the Yad Notebook Dialog.
+#         Replaced an internal config read function with the parse-ini routine.
+#         Replaced dialog utility zenity with yad (Yet Another Dialog).
+# ------------------------------------------------------------------------------
+# Return Status.
+#
+# Status   Description
+# ------  ----------------------------------------------------------------------
+#    0    Completed without errors or the run was terminated by the user.
+#    1    Unable to find the required software.
+#    2    Configuration file does not exist or is not readable.
+#    3    The Simulator has failed to start.
+#    4    The Convertor has failed to start.
+#    5    The parse-ini routine has found an error in the config file.
+#    6    The Host TCP Port is currently in use by another process.
+
+# ------------------------------------------------------------------------------
+# Declare where the configuration (Windows INI format) file is located.
+
+export _CONFIG="${HOME}/bin/data/hp3k_sim.config"
+
+# ------------------------------------------------------------------------------
+# Execute the housekeeping function prior to the script exiting.
+
+trap "housekeeping" EXIT
+
+# ------------------------------------------------------------------------------
+# Generate a unique key (integer) to link the Notebook and Tab dialogs.
+
+export KEY=$RANDOM
+
+# ------------------------------------------------------------------------------
+# Common parameters used by yad.
+
+error_comargs=( # Error dialog boxes.
+  --image dialog-error
+    # Sets dialog image which appears on left side of dialog`s text.
+  --no-escape
+    # Don't close dialog if Escape was pressed.
+  --button yad-close:1
+    # Sets a single dialog button with a close icon.
+    # Returns an exit code of 1 when clicked.
+  --center
+    # Places dialog in center of screen.
+  --height 100
+    # Sets dialog window height in pixels.
+  --width 400
+    # Sets dialog window width in pixels.
+  --text-width 40
+    # Sets maximum dialog text width in characters.
+  --title "${_TITLE}"
+    # Sets dialog title.
+  --text "A text option after the error_comargs array will override this default text."
+    # Sets dialog text (see --text contents).
+  )
+
+info_comargs=( # Info dialog boxes (includes a 4 second timeout & indicator).
+  --image dialog-information
+    # Sets dialog image which appears on left side of dialog`s text.
+  --timeout 4
+    # Sets dialog timeout in seconds.
+  --timeout-indicator bottom
+    # Displays timeout indicator at bottom of dialog.
+  --no-escape
+    # Don't close dialog if Escape was pressed.
+  --no-buttons
+    # Don't show any buttons.
+  --center
+    # Places dialog in center of screen.
+  --height 100
+    # Sets dialog window height in pixels.
+  --width 400
+    # Sets dialog window width in pixels.
+  --text-width 40
+    # Sets maximum dialog text width in characters.
+  --title "${_TITLE}"
+    # Sets dialog title.
+  --text "A text option after the info_comargs array will override this default text."
+    # Sets dialog text (see --text contents).
+  )
+
+tab_comargs=( # Notebook Tabs.
+  --form
+    # Displays form dialog.
+  --plug "${KEY}"
+    # Runs dialog in plug mode for swallow as a notebook tab.
+  --focus-field 1
+    # Sets focused field.
+  --num-output
+    # Outputs index of active element instead of text for combo-box fields.
+  --separator='\n'
+    # Sets output separator characters.
+  )
+
+# ------------------------------------------------------------------------------
+# Check that required software is available. Terminate if missing.
+
+if ( ! command -v yad >/dev/null ); then # yad not found.
+  zenity \
+    --error \
+    --width 200 \
+    --title "${_TITLE}" \
+    --text "Unable to find yad.\\nSee the readme.md document for more details." \
+    --ok-label "Close"
+  exit 1
+  fi
+
+if ( ! command -v enscript >/dev/null ); then  # enscript not found.
+  yad_cmd=(
+    "${error_comargs[@]}"
+    --text "Unable to find enscript.\\nSee the readme.md document for more details."
+    )
+  yad "${yad_cmd[@]}"
+  exit 1
+  fi
+
+if ( ! command -v ps2pdf >/dev/null ); then  # ps2pdf not found.
+  yad_cmd=(
+    "${error_comargs[@]}"
+    --text "Unable to find ps2pdf.\\nSee the readme.md document for more details."
+   )
+  yad "${yad_cmd[@]}"
+  exit 1
+  fi
+
+if ( ! command -v parse-ini >/dev/null ); then  # parse-ini not found.
+  yad_cmd=(
+    "${error_comargs[@]}"
+    --text "Unable to find parse-ini.\\nSee the readme.md document for more details."
+    )
+  yad "${yad_cmd[@]}"
+  exit 1
+  fi
+
+if ( ! command -v elp2pdf.pl >/dev/null ); then  # elp2pdf not found.
+  yad_cmd=(
+    "${error_comargs[@]}"
+    --text "Unable to find elp2pdf.\\See the readme.md document for more details."
+    )
+  yad "${yad_cmd[@]}"
+  exit 1
+  fi
+
+# ------------------------------------------------------------------------------
+# Check that the configuration file is present and readable. Terminate if not.
+
+if [[ ! -r ${_CONFIG} ]]; then
+  yad_cmd=(
+    "${error_comargs[@]}"
+    --text "Unable to access the config file\\n\\t${_CONFIG}.\\n\\nIt either does not exist OR is unreadable."
+    )
+  yad "${yad_cmd[@]}"
+  exit 2
+  fi
+
+# ------------------------------------------------------------------------------
+# Convert the configuration file (Windows INI format) into associative arrays.
+
+eval "$(parse-ini ${_CONFIG})"
+parse_ini_status=$?
+
+if [[ ${parse_ini_status} -ne 0 ]]; then
+  yad_cmd=(
+    "${error_comargs[@]}"
+    --text "The parse-ini routine has found an error in the config file.\\nReturned Status is ${parse_ini_status}"
+    )
+  yad "${yad_cmd[@]}"
+  exit 5
+  fi
+
+# ------------------------------------------------------------------------------
+# Generate temporary filenames to hold the returned Tab dialog data.
+
+export tab_1=$(mktemp --tmpdir hp3k-simulator_tab.XXXXXXXX)
+export tab_2=$(mktemp --tmpdir hp3k-convertor_tab.XXXXXXXX)
+export tab_3=$(mktemp --tmpdir hp3k-terminals_tab.XXXXXXXX)
+
+# ------------------------------------------------------------------------------
+# Function: Display the About Dialog.
+
+about() {
+  yad_cmd=(
+    --about
+      # Displays about dialog.
+    --image "${_IMAGE}"
+      # Sets programm icon name.
+    --window-icon "${_IMAGE}"
+      # Sets window icon.
+    --pname "${_TITLE}"
+      # Sets programm name.
+    --pversion "${_NAME} - ${_VERSION}"
+      # Sets program version string.
+    --comments "Creates a Terminal Window in which to run an instance of the chosen
+      HP3000 MPE/V Simulator. If the Simulator supports the 'Line Printer
+      to PDF Convertor' then a 2nd Terminal Window is created where the
+      Convertor displays its Status Messages."
+      # Sets program detailed description.
+    --copyright "${_COPYRIGHT}"
+      # Sets program copyright string.
+    --license "${_LICENSE}"
+      # Sets program license.
+    )
+  yad "${yad_cmd[@]}"
+  }
+
+export -f about
+
+# ------------------------------------------------------------------------------
+# Function: Display the Help Dialog.
+
+help() {
+  yad_cmd=(
+    --center
+      # Places dialog in center of screen.
+    --fixed
+      # Makes the dialog fixed width and height.
+    --width 400
+      # Sets dialog window width in pixels.
+    --align left
+      # Sets alignment of bar labels.
+    --text-width 40
+      # Sets maximum dialog text width in characters.
+    --borders 20
+      # Sets dialog window borders.
+    --window-icon "${_IMAGE}"
+      # Sets the window icon.
+    --title "${_TITLE}"
+      # Sets dialog title.
+    --text "
+<b>Simulator:</b>
+
+\\tThis tab displays the configuration for the chosen Simulator.
+
+<b>Convertor:</b>
+
+\\tThis tab lets you change the default configuration for the Convertor if it is
+\\tsupported by the chosen Simulator.
+
+<b>Terminal Windows:</b>
+
+\\tThis tab lets you change the default configuration of the Terminal Window that
+\\tthe chosen Simulator will run within.
+
+\\tIf it is supported, you can also change the default configuration of the Terminal
+\\tWindow that is used by the Convertor to display its Status Messages.
+
+\\tYou can adjust the width (Columns), height (Rows), location (X &amp; Y Coordinate),
+\\tand text size (Zoom Factor). A Zoom Factor of 1.0 sets the text to its normal size,
+\\t0.8 will reduce it by 20% and 1.2 will increase it by 20%.
+" 
+      # Sets dialog text
+    --button yad-close
+      # Sets a single dialog button with a close icon.
+    )
+  yad "${yad_cmd[@]}"
+  }
+
+export -f help
+
+# ------------------------------------------------------------------------------
+# Function: Executed prior to the script exiting.
+
+housekeeping() {
+  # Delete temporary files created/used to hold the returned Tab dialog data.
+  [[ -e ${tab_1} ]] && rm -f $tab_1
+  [[ -e ${tab_2} ]] && rm -f $tab_2
+  [[ -e ${tab_3} ]] && rm -f $tab_3
+  # Delete the function definitions created and used within this script.
+  unset about
+  unset help
+  unset housekeeping
+  # Tell the user that the script has finished.
+  yad_cmd=(
+   "${info_comargs[@]}"
+   --image "${HOME}/bin/data/thats-all-folks.jpg"
+   --text "<b>Th-th-th-that's all, folks!</b>"
+   )
+ yad "${yad_cmd[@]}"
+ exit 0
+  }
+
+export -f housekeeping
+
+# ------------------------------------------------------------------------------
+# Display the available Simulators and return the selected ones item number.
+
+# How many 'simulator n' entries are there?
+count="$((${#INI_simulators[@]} - 1))"
+
+# Load the Simulator Select combo-box.
+if [[ ${INI_simulators['default']} -eq 1 ]]; then
+  simulator_combo_box="^"
+  fi
+simulator_combo_box+=${INI_simulators['simulator 1']}
+for (( current=2; current<=$count; current++ )); do
+  simulator_combo_box+="!"
+  if [[ ${INI_simulators['default']} -eq ${current} ]]; then
+    simulator_combo_box+="^"
+    fi
+  simulator_combo_box+=${INI_simulators[simulator ${current}]}
+  done
+
+# Load the yad command array.
+yad_cmd=(
+  --form
+    # Displays HTML dialog.
+  --center
+    # Places dialog in center of screen.
+  --fixed
+    # Makes dialog fixed width and height.
+  --align left
+    # Sets alignment of bar labels.
+  --no-escape
+    # Don't close dialog if Escape was pressed.
+  --text-width 40
+    # Sets the maximum dialog text width in characters.
+  --borders 20
+    # Set dialog window borders.
+  --window-icon "${_IMAGE}"
+    # Set the window icon.
+  --title "${_TITLE}"
+    # Set the dialog title.
+  --focus-field 1
+    # Set focused field.
+  --num-output
+    # Output index of active element instead of text for combo-box fields.
+  --field "<b>Simulator Select</b>:LBL" ""
+  --field "\\tCurrent:CB" "${simulator_combo_box}"
+  --field "\\n\\tSelect required Simulator and click Execute button.:LBL" ""
+  --button yad-about:"bash -c about"
+  --button yad-quit:1
+  --button yad-execute:0
+  )
+
+# Display the dialog and return selected option.
+yad_return=$( yad "${yad_cmd[@]}" )
+yad_status=$?
+
+if [[ ${yad_status} -eq 1 ]]; then # Quit button pressed.
+  yad_cmd=(
+    "${info_comargs[@]}"
+    --text "Program terminated by user."
+    )
+  yad "${yad_cmd[@]}"
+  exit 0
+  fi
+
+# ------------------------------------------------------------------------------
+# Get the option number of the chosen Simulator.
+
+chosen_simulator=`echo ${yad_return} | awk --field-separator='|' '{print $2}'`
+
+# ------------------------------------------------------------------------------
+# Declare a Name Reference for the INI_simulator_n and INI_convertor_n arrays.
+#   Where 'n' is the option number of the chosen Simulator.
+
+declare -n simulator_n=INI_simulator_${chosen_simulator}
+declare -n convertor_n=INI_convertor_${chosen_simulator}
+
+# ------------------------------------------------------------------------------
+# Get the Line Printer Convertor data source location.
+
+export source=${simulator_n['source']}
+
+# ------------------------------------------------------------------------------
+# Does the chosen Simulator support the Line Printer Convertor?
+
+convertor_supported=
+
+if [[ ${source} != "" ]]; then
+  convertor_supported=True
+  fi
+
+# ------------------------------------------------------------------------------
+# Get the IP Address & TCP Port or Filename for the Convertor.
+
+if [[ ${convertor_supported} ]]; then
+
+  use_ip_and_port=
+
+  if [[ "$source" == *":"* ]]; then # IP Address & TCP Port.
+    host_ip=${source%:*} # Extract everything before the colon.
+    host_port=${source##*:}  # Extract everything after the colon
+    use_ip_and_port=True
+
+  else # Filename (with optional path).
+    host_file=$source
+    fi
+
+  fi
+# ------------------------------------------------------------------------------
+# Initialise the Simulator Tab (1).
+
+yad \
+  "${tab_comargs[@]}" \
+  --tabnum 1 \
+  --field "<b>Simulator Configuration</b>:LBL" "" \
+  --field "\\tChosen:RO" "${INI_simulators[simulator ${chosen_simulator}]}" \
+  --field "\\tDirectory:RO" "${simulator_n['directory']}" \
+  --field "\\tSource:RO" "${source}" \
+  --field "\\tScript:RO" "${simulator_n['script']}" \
+  --field "\\tNote: The above is for information only.:LBL" "" > $tab_1 &
+
+# ------------------------------------------------------------------------------
+# Initialise the Convertor Tab (2).
+
+if [[ ${convertor_supported} ]]; then
+
+  if [[ ${use_ip_and_port} ]]; then
+    yad \
+      "${tab_comargs[@]}" \
+      --tabnum 2 \
+      --field "<b>Line Printer to PDF Convertor Configuration</b>:LBL" "" \
+      --field "\\tHost IP Address:RO" "${host_ip}" \
+      --field "\\tHost TCP Port:RO" "${host_port}" \
+      --field "\\tLines per Bar:NUM" "${convertor_n['lines per bar']}"\
+      --field "\\tBar Colour:CB" "${convertor_n['bar colours']}" \
+      --field "\\tPDF Directory" "${convertor_n['directory']}" \
+      --field "\\tSystem Name (*)" "${convertor_n['system name']}" \
+      --field "\\tPrinter Name (*)" "${convertor_n['printer name']}" \
+      --field "\\n\\tFields marked (*) are optional.:LBL" "" > $tab_2 &
+
+  else # Filename.
+    yad \
+      "${tab_comargs[@]}" \
+      --tabnum 2 \
+      --field "<b>Line Printer to PDF Convertor Configuration</b>:LBL" "" \
+      --field "\\tHost LP File:RO" "${host_file}" \
+      --field "\\tLines per Bar:NUM" "${convertor_n['lines per bar']}"\
+      --field "\\tBar Colour:CB" "${convertor_n['bar colours']}" \
+      --field "\\tPDF Directory" "${convertor_n['directory']}" \
+      --field "\\tSystem Name (*)" "${convertor_n['system name']}" \
+      --field "\\tPrinter Name (*)" "${convertor_n['printer name']}" \
+      --field "\\n\\tFields marked (*) are optional.:LBL" "" > $tab_2 &
+    fi
+
+else
+  yad \
+    "${tab_comargs[@]}" \
+    --tabnum 2 \
+    --field "<b>Line Printer to PDF Convertor Configuration</b>:LBL" "" \
+    --field "\\tFunction is not supported by the chosen Simulator:LBL" "" > $tab_2 &
+  fi
+
+# ------------------------------------------------------------------------------
+# Initialise the Terminals Tab (3).
+
+if [[ ${convertor_supported} ]]; then
+  yad \
+    "${tab_comargs[@]}" \
+    --tabnum 3 \
+    --field "<b>Simulator Terminal Window Configuration</b>:LBL" "" \
+    --field "\\tColumns:NUM" "${INI_simulator_window['columns']}" \
+    --field "\\tRows:NUM" "${INI_simulator_window['rows']}" \
+    --field "\\tX Coordinate:NUM" "${INI_simulator_window['x coordinate']}" \
+    --field "\\tY Coordinate:NUM" "${INI_simulator_window['y coordinate']}" \
+    --field "\\tZoom Factor:NUM" "${INI_simulator_window['zoom factor']}!0.50..1.50!0.10!2" \
+    --field "\n<b>Convertor Terminal Window Configuration</b>:LBL" "" \
+    --field "\\tColumns:NUM" "${INI_convertor_window['columns']}" \
+    --field "\\tRows:NUM" "${INI_convertor_window['rows']}" \
+    --field "\\tX Coordinate:NUM" "${INI_convertor_window['x coordinate']}" \
+    --field "\\tY Coordinate:NUM" "${INI_convertor_window['y coordinate']}" \
+    --field "\\tZoom Factor:NUM" "${INI_convertor_window['zoom factor']}!0.50..1.50!0.10!2" > $tab_3 &
+
+else
+  yad \
+    "${tab_comargs[@]}" \
+    --tabnum 3 \
+    --field "<b>Simulator Terminal Window Configuration</b>:LBL" "" \
+    --field "\\tColumns:NUM" "${INI_simulator_window['columns']}" \
+    --field "\\tRows:NUM" "${INI_simulator_window['rows']}" \
+    --field "\\tX Coordinate:NUM" "${INI_simulator_window['x coordinate']}" \
+    --field "\\tY Coordinate:NUM" "${INI_simulator_window['y coordinate']}" \
+    --field "\\tZoom Factor:NUM" "${INI_simulator_window['zoom factor']}!0.50..1.50!0.10!2" \
+    --field "\n<b>Convertor Terminal Window Configuration</b>:LBL" "" \
+    --field "\\tNo terminal window to configure:LBL" "" > $tab_3 &
+  fi
+
+# ------------------------------------------------------------------------------
+# Display the Notebook Dialog.
+
+yad_cmd=(
+  --notebook
+    # Displays a Notebook dialog.
+  --key $KEY
+    # Sets the key of the children (tabs).
+  --center
+    # Places window in center of screen.
+  --fixed
+    # Makes window fixed width and height.
+  --width 400
+    # Sets the window window width.
+  --window-icon "${_IMAGE}"
+    # Sets the window icon.
+  --title "${_TITLE}"
+    # Sets the dialog title.
+  --tab-pos top
+    # Sets the tabs position.
+  --tab-borders 20
+    # Sets the borders width around widget in tabs.
+  --active-tab 1
+    # Sets the active tab.
+  --expand
+    # Expands all tabs to full width of a dialog window.
+  --tab "Simulator"
+    # Adds tab with specified label to notebook.
+  --tab "Convertor"
+    # Adds tab with specified label to notebook.
+  --tab "Terminals"
+    # Adds tab with specified label to notebook.
+  --button "Help":"bash -c help"
+    # Adds the dialog button.
+  --button yad-quit:1
+    # Add the dialog button.
+  --button yad-execute:0
+    # Add the dialog button.
+  )
+yad "${yad_cmd[@]}"
+yad_status=$?
+
+# Terminate if [Quit] pressed.
+
+if [[ ${yad_status} -eq 1 ]]; then # Quit button pressed.
+  yad_cmd=(
+    "${info_comargs[@]}"
+    --text "Program terminated by user."
+    )
+  yad "${yad_cmd[@]}"
+  exit 0
+  fi
+
+# ------------------------------------------------------------------------------
+# Load returned Simulator Tab data into variables.
+
+# ----
+# The fields in this tab are currently read-only. No data to be returned.
+# ----
+
+#eval simulator_tab=($(< $tab_1))
+
+#field_name_1=${simulator_tab[0]}
+#  ...
+#field_name_n=${simulator_tab[n]}
+
+# ------------------------------------------------------------------------------
+# Load returned Convertor Tab data into variables.
+
+eval convertor_tab=($(< $tab_2))
+
+if [[ ${use_ip_and_port} ]]; then
+  host_ip=${convertor_tab[0]}
+  host_port=${convertor_tab[1]}
+  bar_lines=${convertor_tab[2]}
+  bar_colour=${convertor_tab[3]}
+  pdf_directory=${HOME}${convertor_tab[4]}
+  system_id=${convertor_tab[5]}
+  printer_id=${convertor_tab[6]}
+
+else
+  host_file=${convertor_tab[0]}
+  bar_lines=${convertor_tab[1]}
+  bar_colour=${convertor_tab[2]}
+  pdf_directory=${HOME}${convertor_tab[3]}
+  system_id=${convertor_tab[4]}
+  printer_id=${convertor_tab[5]}
+  fi
+
+# ------------------------------------------------------------------------------
+# Terminate if the Host TCP Port is already in use.
+
+if [[ ${use_ip_and_port} ]]; then
+
+  nc -z ${host_ip} ${host_port} && port_in_use=true || port_in_use=
+
+  if [[ ${port_in_use} ]]; then
+    yad_cmd=(
+      "${error_comargs[@]}"
+      --text "The Simulator is unable to start.\\nThe Host TCP Port is in use by another process.\\n\\nPlease try again later."
+      )
+    yad "${yad_cmd[@]}"
+    exit 6
+    fi
+
+  fi
+
+# ------------------------------------------------------------------------------
+# Load returned Terminals Tab data into variables.
+
+eval terminals_tab=($(< $tab_3))
+
+simulator_columns=${terminals_tab[0]}
+simulator_rows=${terminals_tab[1]}
+simulator_x_coord=${terminals_tab[2]}
+simulator_y_coord=${terminals_tab[3]}
+simulator_zoom=${terminals_tab[4]}
+
+if [[ ${convertor_supported} ]]; then
+  convertor_columns=${terminals_tab[5]}
+  convertor_rows=${terminals_tab[6]}
+  convertor_x_coord=${terminals_tab[7]}
+  convertor_y_coord=${terminals_tab[8]}
+  convertor_zoom=${terminals_tab[9]}
+  fi
+
+# ------------------------------------------------------------------------------
+# Switch to the selected Simulators directory.
+
+cd ${HOME}${simulator_n['directory']}
+
+# ------------------------------------------------------------------------------
+# Start the Simulator in its Terminal Window.
+
+terminal_cmd=(
+  --title="HP3000 ${INI_simulators[simulator ${chosen_simulator}]}"
+  --hide-menubar
+  --geometry=${simulator_columns}x${simulator_rows}+${simulator_x_coord}+${simulator_y_coord}
+  --zoom=${simulator_zoom}
+  --
+  hp3000 "${simulator_n['script']}"
+  )
+gnome-terminal  "${terminal_cmd[@]}"
+terminal_status=$?
+
+if [[ ${terminal_status} -ne 0 ]]; then
+  yad_cmd=(
+    "${error_comargs[@]}"
+    --text "The Simulator has failed to start.\\nReturned Status is ${terminal_status}"
+    )
+  yad "${yad_cmd[@]}"
+  exit 3
+  fi
+
+yad_cmd=(
+  "${info_comargs[@]}"
+  --text "The Simulator is now running."
+  )
+yad "${yad_cmd[@]}"
+
+# ------------------------------------------------------------------------------
+# Start the Convertor in its Terminal Window (If Supported).
+
+if [[ ${convertor_supported} ]]; then
+
+  if [[ ${system_id} != "" ]]; then # User entered a System Name. 
+    system_name="--system-id ${system_id}"
+  else
+    system_name=""
+    fi
+
+  if [[ ${printer_id} != "" ]]; then # User entered a Printer Name.
+    printer_name="--name ${printer_id}"
+  else
+    printer_name=""
+    fi
+
+  terminal_cmd=(
+    --title="HP3000 Line Printer ${printer_name} to PDF"
+    --hide-menubar
+    --geometry=${convertor_columns}x${convertor_rows}+${convertor_x_coord}+${convertor_y_coord}
+    --zoom=${convertor_zoom}
+    --
+    elp2pdf.pl
+    --lptype mpev
+    )
+
+  if [[ ${use_ip_and_port} ]]; then # Read printer data from Host TCP Port.
+    terminal_cmd+=(
+      --ip ${host_ip}
+      --port ${host_port}
+      --color ${bar_colour}
+      --bar-height ${bar_lines}
+      --path ${pdf_directory}
+      ${system_name}
+      ${printer_name}
+      )
+  else # Read printer data from Host Disc File.
+    terminal_cmd+=(
+      --tail
+      --wait 30
+      --color ${bar_colour}
+      --bar-height ${bar_lines}
+      --path ${pdf_directory}
+      ${system_name}
+      ${printer_name}
+      ${host_file}
+      )
+    fi
+
+  gnome-terminal "${terminal_cmd[@]}"
+  terminal_status=$?
+
+  if [[ ${terminal_status} -ne 0 ]]; then
+    yad_cmd=(
+      "${error_comargs[@]}"
+      --text "The Convertor has failed to start.\\nReturned Status is ${terminal_status}"
+      )
+    yad "${yad_cmd[@]}"
+    exit 4
+    fi
+
+  yad_cmd=(
+    "${info_comargs[@]}"
+    --text "The Convertor is now running."
+    )
+  yad "${yad_cmd[@]}"
+
+  fi
+
+exit 0
+  
+# ------------------------------------------------------------------------------
+# End of Script
+# ------------------------------------------------------------------------------
