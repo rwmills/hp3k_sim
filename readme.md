@@ -54,7 +54,7 @@
 
 ### The Simulator Select Screen
 
-> ![](Simulator Select 1.png) ![](Simulator Select 2.png)
+> ![](SimulatorSelect1.png) ![](SimulatorSelect2.png)
 
 > The left-hand screen shows that David Bryan's Series 58 Simulator was chosen.
 
@@ -68,7 +68,7 @@
 
 ### The Simulator Configuration Tab
 
-> ![](Simulator Config 1.png) ![](Simulator Config 2.png)
+> ![](SimulatorConfig1.png) ![](SimulatorConfig2.png)
 
 > The left-hand screen shows the configuration that would be used for David Bryan's Series 58 Simulator.
 
@@ -76,19 +76,19 @@
 
 ### The Convertor Configuration Tab
 
-> ![](Convertor Config 1.png) ![](Convertor Config 2.png)
+> ![](ConvertorConfig1.png) ![](ConvertorConfig2.png)
 
 > The left-hand screen shows the default Convertor configuration that would be used for David Bryan's Series 58 Simulator.
 
 > The right-hand screen shows the default Convertor configuration that would be used for Gavin Scott's Big Series 58 Simulator.
 
-> ![](Convertor Config 3.png)
+> ![](ConvertorConfig3.png)
 
 > This screen is displayed when the Convertor is ***not*** supported by the chosen Simulator.
 
 ### The Terminals Configuration Tab
 
-> ![](Terminal Config 1.png) ![](Terminal Config 2.png)
+> ![](TerminalConfig1.png) ![](TerminalConfig2.png)
 
 > The left-hand screen shows the default Terminal Window configurations that would be used if the Convertor is supported.
 
